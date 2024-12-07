@@ -1,0 +1,28 @@
+{
+    "name": "project-management-platform-bot",
+    "version": "1.0.0",
+    "main": "./dest/main.js",
+    "scripts": {
+        "start": "ts-node src/main.ts",
+        "dev": "nodemon --exec ts-node src/main.ts",
+        "build": "tsc"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "body-parser": "^1.20.3",
+        "discord.js": "^14.16.3",
+        "dotenv": "^16.4.7",
+        "express": "^4.21.2"
+    },
+    "devDependencies": {
+        "@types/express": "^5.0.0",
+        "@types/node": "^17.0.15",
+        "nodemon": "^3.1.7",
+        "ts-node": "^10.9.2",
+        "tsconfig-paths": "^4.2.0",
+        "typescript": "^5.7.2"
+    }
+}
