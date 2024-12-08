@@ -2,7 +2,7 @@ export * from "./types";
 import * as logger from "@/core/logger";
 import { setWebhook } from "@/core/http/webhooks";
 import { toCamelCaseMiddleware } from "@/core/http/middlewares/to-camel-case.middleware";
-import { HttpRequest } from "@/core/http";
+import { HttpRequest, HttpResponse } from "@/core/http";
 import { GitlabEvent } from "./types";
 
 let gitlabEventHandler: GitlabEventHandler;
@@ -14,12 +14,22 @@ export function setGitlabEventHandler(handler: GitlabEventHandler) {
 export async function setUpGitlabIntegration() {
     logger.info("Setting up Gitlab integration");
 
-    setWebhook("/gitlab", toCamelCaseMiddleware, async (req: HttpRequest) => {
-        if (!gitlabEventHandler) {
-            logger.warn("Gitlab event handler not set");
-            return;
-        }
+    setWebhook(
+        "/gitlab",
+        toCamelCaseMiddleware,
+        async (req: HttpRequest, res: HttpResponse) => {
+            if (!gitlabEventHandler) {
+                logger.warn("Gitlab event handler not set");
+                return;
+            }
 
-        await gitlabEventHandler(req.body as GitlabEvent);
-    });
+            try {
+                await gitlabEventHandler(req.body as GitlabEvent);
+                res.status(200).send();
+            } catch (error) {
+                logger.error("Gitlab event handler error", error);
+                res.status(500).send();
+            }
+        }
+    );
 }

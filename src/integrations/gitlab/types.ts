@@ -41,6 +41,10 @@ export interface Changes {
         previous: Assignee[];
         current: Assignee[];
     };
+    stateId: {
+        previous: number;
+        current: number;
+    };
 }
 
 export enum ObjectAttributesAction {

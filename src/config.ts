@@ -1,11 +1,8 @@
-export const gitlabMemberToDiscordMemberId = new Map<string, string>([
-    ["24643597", "457554163207766039"],
+export const gitlabMemberToDiscordMemberId = new Map<number, string>([
+    [24643597, "457554163207766039"],
 ]);
 
-export const gitlabMemberIdToSupervisorId = new Map<string, string>([
-    ["24643597", "24643597"],
-]);
-
-export const projectCoordinatorDiscordMemeberId = "457554163207766039";
-export const subteam1SupervisorDiscordMemberId = "457554163207766039";
-export const subteam2SupervisorDiscordMemberId = "457554163207766039";
+export const PC_DISCORD_ROLE_ID = process.env.PC_DISCORD_ROLE_ID;
+export const SV_DISCORD_ROLE_ID = process.env.SV_DISCORD_ROLE_ID;
+export const SUBTEAM1_DISCORD_ROLE_ID = process.env.SUBTEAM1_DISCORD_ROLE_ID;
+export const SUBTEAM2_DISCORD_ROLE_ID = process.env.SUBTEAM2_DISCORD_ROLE_ID;

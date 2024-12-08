@@ -1,80 +1,78 @@
 import * as logger from "@/core/logger";
-import { DISCORD_TASKS_CHANNEL_ID, DISCORD_TOKEN } from "./config";
+import {
+    DISCORD_SERVER_ID,
+    DISCORD_TASKS_CHANNEL_ID,
+    DISCORD_TOKEN,
+} from "./config";
 import { Client, GatewayIntentBits, TextChannel } from "discord.js";
 
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMembers,
+    ],
 });
 
-function getChannel(): TextChannel | null {
-    const channel = client.channels.cache.get(
-        DISCORD_TASKS_CHANNEL_ID!
-    ) as TextChannel;
-    return channel || null;
+// Servers
+
+export async function getServerById(id: string) {
+    await client.guilds.fetch(id);
+    return client.guilds.cache.get(id);
 }
 
+// Channels
+
+export async function getChannelById(id: string) {
+    await client.channels.fetch(id);
+    return client.channels.cache.get(id);
+}
+
+// Threads
+
 export async function getThreadById(id: string) {
-    const channel = getChannel();
-
-    if (!channel) {
-        throw new Error("Discord channel not found");
-    }
-
+    // Load
+    const channel = (await client.channels.fetch(
+        DISCORD_TASKS_CHANNEL_ID!
+    )) as TextChannel;
     await channel.threads.fetch();
 
     const thread = channel.threads.cache.get(id);
-
-    if (!thread) {
-        throw new Error("Discord thread not found");
-    }
 
     return thread;
 }
 
 export async function getThreadByName(name: string) {
-    const channel = getChannel();
-
-    if (!channel) {
-        throw new Error("Discord channel not found");
-    }
-
+    // Load
+    const channel = (await client.channels.fetch(
+        DISCORD_TASKS_CHANNEL_ID!
+    )) as TextChannel;
     await channel.threads.fetch();
 
     const thread = channel.threads.cache.find((thread) => thread.name === name);
-
-    if (!thread) {
-        throw new Error("Discord thread not found");
-    }
 
     return thread;
 }
 
 export async function getThreadByNamePrefix(prefix: string) {
-    const channel = getChannel();
-
-    if (!channel) {
-        throw new Error("Discord channel not found");
-    }
-
+    // Load
+    const channel = (await client.channels.fetch(
+        DISCORD_TASKS_CHANNEL_ID!
+    )) as TextChannel;
     await channel.threads.fetch();
 
     const thread = channel.threads.cache.find((thread) =>
         thread.name.startsWith(prefix)
     );
 
-    if (!thread) {
-        throw new Error("Discord thread not found");
-    }
-
     return thread;
 }
 
 export async function openThread(name: string) {
-    const channel = getChannel();
-
-    if (!channel) {
-        throw new Error("Discord channel not found");
-    }
+    // Load
+    const channel = (await client.channels.fetch(
+        DISCORD_TASKS_CHANNEL_ID!
+    )) as TextChannel;
 
     const thread = await channel.threads.create({
         name: name,
@@ -84,13 +82,15 @@ export async function openThread(name: string) {
 
     logger.info(`Thread "${name}" created: ${thread.id}`);
 
-    thread.members.add("457554163207766039");
-
     return thread;
 }
 
 export async function archiveThread(threadId: string) {
     const thread = await getThreadById(threadId);
+
+    if (!thread) {
+        throw new Error("Discord thread not found");
+    }
 
     await thread.setArchived(true);
 
@@ -100,21 +100,37 @@ export async function archiveThread(threadId: string) {
 export async function unarchiveThread(threadId: string) {
     const thread = await getThreadById(threadId);
 
+    if (!thread) {
+        throw new Error("Discord thread not found");
+    }
+
     await thread.setArchived(false);
 
     logger.info(`Thread "${threadId}" unarchived`);
 }
 
+// Messages
+
 export async function sendMessageToThread(threadId: string, message: string) {
     const thread = await getThreadById(threadId);
+
+    if (!thread) {
+        throw new Error("Discord thread not found");
+    }
 
     await thread.send(message);
 
     logger.info(`Message sent to thread "${threadId}"`);
 }
 
+// Members
+
 export async function addMemberToThread(threadId: string, userId: string) {
     const thread = await getThreadById(threadId);
+
+    if (!thread) {
+        throw new Error("Discord thread not found");
+    }
 
     await thread.members.add(userId);
 
@@ -127,6 +143,34 @@ export async function addMembersToThread(threadId: string, userIds: string[]) {
     }
 }
 
+export async function getMemberRoles(memberId: string) {
+    // Load all members of the server
+    const server = await client.guilds.fetch(DISCORD_SERVER_ID!);
+    await server.members.fetch();
+
+    return server.members.cache.get(memberId)?.roles.cache.map((role) => ({
+        name: role.name,
+        id: role.id,
+    }));
+}
+
+export async function getMembersByRoles(roleIds: string[]) {
+    // Load all members of the server
+    const server = await client.guilds.fetch(DISCORD_SERVER_ID!);
+    await server.members.fetch();
+
+    return server.members.cache
+        .filter((member) =>
+            roleIds.every((roleId) => member.roles.cache.get(roleId))
+        )
+        .map((member) => ({
+            name: member.displayName,
+            id: member.id,
+        }));
+}
+
+// Integration
+
 export async function setUpDiscordIntegration() {
     logger.info("Setting up Discord integration");
 
@@ -138,19 +182,32 @@ export async function setUpDiscordIntegration() {
         throw new Error("DISCORD_TASKS_CHANNEL_ID is not defined");
     }
 
-    client.once("ready", async () => {
-        logger.info(`Logged in as ${client.user?.tag}`);
+    if (!DISCORD_SERVER_ID) {
+        throw new Error("DISCORD_SERVER_ID is not defined");
+    }
 
-        const channel = await client.channels.fetch(DISCORD_TASKS_CHANNEL_ID!);
+    await client
+        .login(DISCORD_TOKEN)
+        .then(async () => {
+            logger.info(`Logged in as ${client.user?.tag}`);
 
-        if (!channel || !channel.isTextBased()) {
-            throw new Error("Discord channel is not text based or not found");
-        }
+            const guild = await getServerById(DISCORD_SERVER_ID!);
 
-        logger.info(`Discord channel "${channel.id}" is ready`);
-    });
+            if (!guild) {
+                throw new Error("Discord guild not found");
+            }
 
-    client.login(DISCORD_TOKEN).catch((error) => {
-        logger.error("Failed to log in:", error);
-    });
+            const channel = await getChannelById(DISCORD_TASKS_CHANNEL_ID!);
+
+            if (!channel || !channel.isTextBased()) {
+                throw new Error(
+                    "Discord channel is not text based or not found"
+                );
+            }
+
+            logger.info(`Discord channel "${channel.id}" is ready`);
+        })
+        .catch((error) => {
+            logger.error("Failed to log in:", error);
+        });
 }
