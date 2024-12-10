@@ -4,7 +4,7 @@ dotenv.config();
 import { setUpIntegrations } from "./integrations";
 import { setUpHttpServer } from "./core/http";
 import { setGitlabEventHandler } from "./integrations/gitlab";
-import { gitlabIssueToDiscordThreads } from "./commands/gitlab-issue-to-discord-threads";
+import { gitlabIssueToDiscordThreads } from "./features/gitlab-issue-to-discord-threads";
 import {
     PC_DISCORD_ROLE_ID,
     SV_DISCORD_ROLE_ID,

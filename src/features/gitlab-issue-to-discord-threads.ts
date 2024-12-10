@@ -25,11 +25,11 @@ import {
 import { isValidEvent } from "./gitlab-issue-filter";
 
 function getUniqueDiscordThreadNamePrefixFromGitlabEvent(event: GitlabEvent) {
-    return `${event.objectAttributes.id}#${event.objectAttributes.iid}`;
+    return `${event.objectAttributes.iid}`;
 }
 
 function getDiscordThreadNamePrefixFromGitlabEvent(event: GitlabEvent) {
-    return `${event.objectAttributes.id}#${event.objectAttributes.iid} - ${event.objectAttributes.title}`;
+    return `${event.objectAttributes.iid} - ${event.objectAttributes.title}`;
 }
 
 function getAssigneeGitlabIdFromGitlabEvent(event: GitlabEvent) {

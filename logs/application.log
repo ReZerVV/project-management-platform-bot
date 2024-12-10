@@ -1,0 +1,27 @@
+[2024-12-09 09:56:09] INFO: Setting up Gitlab integration
+[2024-12-09 09:56:09] INFO: Setting up Discord integration
+[2024-12-09 09:56:10] INFO: Logged in as project-management-platform-bot#2587
+[2024-12-09 09:56:10] ERROR: Failed to log in: DiscordAPIError[10004]: Unknown Guild
+[2024-12-09 09:56:10] INFO: Server is running on port 3000
+[2024-12-09 09:58:49] INFO: Thread "158491093#2217 - fix httpGet - by id - returns single resource test" created: 1315588451596369920
+[2024-12-09 09:58:49] ERROR: Gitlab event handler error TypeError [InvalidType]: Supplied member is not a UserResolvable.
+[2024-12-09 09:58:51] INFO: Message sent to thread "1315588451596369920"
+[2024-12-09 10:12:15] INFO: Setting up Gitlab integration
+[2024-12-09 10:12:15] INFO: Setting up Discord integration
+[2024-12-09 10:12:16] INFO: Logged in as project-management-platform-bot#2587
+[2024-12-09 10:12:16] INFO: Discord channel "1295330343582171239" is ready
+[2024-12-09 10:12:16] INFO: Server is running on port 3000
+[2024-12-09 10:12:44] INFO: Thread "158489930#2212 - remarks: 2173-3-refactor-project-file-structure-by-grouping-entities" created: 1315591953332568116
+[2024-12-09 10:12:44] WARN: Subteam role not found
+[2024-12-09 10:12:45] INFO: User "1239590529973616682" added to thread "1315591953332568116"
+[2024-12-09 10:12:45] WARN: Subteam role not found
+[2024-12-09 10:12:46] INFO: User "1239590529973616682" added to thread "1315591953332568116"
+[2024-12-10 09:42:57] INFO: Setting up Gitlab integration
+[2024-12-10 09:42:57] INFO: Setting up Discord integration
+[2024-12-10 09:42:58] INFO: Logged in as project-management-platform-bot#2587
+[2024-12-10 09:42:59] INFO: Discord channel "1295330343582171239" is ready
+[2024-12-10 09:42:59] INFO: Server is running on port 3000
+[2024-12-10 09:50:13] INFO: Thread "2230 - fix eslint disable in FdEditResourcePropertyBlock" created: 1315948677268901938
+[2024-12-10 09:50:14] INFO: User "1239590529973616682" added to thread "1315948677268901938"
+[2024-12-10 09:50:15] INFO: Message sent to thread "1315948677268901938"
+[2024-12-10 09:50:25] INFO: Message sent to thread "1315948677268901938"

@@ -1,0 +1,2 @@
+[2024-12-09 09:56:10] ERROR: Failed to log in: DiscordAPIError[10004]: Unknown Guild
+[2024-12-09 09:58:49] ERROR: Gitlab event handler error TypeError [InvalidType]: Supplied member is not a UserResolvable.
