@@ -23,6 +23,7 @@ import {
     ObjectAttributesState,
 } from "@/integrations/gitlab";
 import { isValidEvent } from "./gitlab-issue-filter";
+import { Collection, ThreadMember } from "discord.js";
 
 function getUniqueDiscordThreadNamePrefixFromGitlabEvent(event: GitlabEvent) {
     return `${event.objectAttributes.iid}`;
@@ -40,8 +41,20 @@ function gitlabIdToDiscordId(gitlabId: number) {
     return gitlabMemberToDiscordMemberId.get(gitlabId)!;
 }
 
-async function getDiscordMemberIdsByDevDiscordMemberId(devMemberId: string) {
-    const memberIds: string[] = [devMemberId];
+async function getDiscordMemberIdsByDevDiscordMemberId(devMemberId?: string) {
+    const memberIds: string[] = [];
+
+    const pcMembers = await getMembersByRoles([PC_DISCORD_ROLE_ID!]);
+
+    for (const pcMember of pcMembers) {
+        memberIds.push(pcMember.id);
+    }
+
+    if (!devMemberId) {
+        return memberIds;
+    }
+
+    memberIds.push(devMemberId);
 
     const devRoles = await getMemberRoles(devMemberId);
 
@@ -69,12 +82,6 @@ async function getDiscordMemberIdsByDevDiscordMemberId(devMemberId: string) {
         memberIds.push(svMember.id);
     }
 
-    const pcMembers = await getMembersByRoles([PC_DISCORD_ROLE_ID!]);
-
-    for (const pcMember of pcMembers) {
-        memberIds.push(pcMember.id);
-    }
-
     return memberIds;
 }
 
@@ -83,137 +90,57 @@ export async function gitlabIssueToDiscordThreads(event: GitlabEvent) {
         return;
     }
 
-    switch (event.objectAttributes.action) {
-        case ObjectAttributesAction.Open:
-            {
-                const thread = await openThread(
-                    getDiscordThreadNamePrefixFromGitlabEvent(event)
-                );
+    if (event.objectAttributes.action === ObjectAttributesAction.Close) {
+        const thread = await getThreadByNamePrefix(
+            getUniqueDiscordThreadNamePrefixFromGitlabEvent(event)
+        );
 
-                await addMembersToThread(
-                    thread.id,
-                    (
-                        await getMembersByRoles([PC_DISCORD_ROLE_ID!])
-                    ).map((member) => member.id)
-                );
-            }
-            break;
-        case ObjectAttributesAction.Update:
-            {
-                let thread = await getThreadByNamePrefix(
-                    getUniqueDiscordThreadNamePrefixFromGitlabEvent(event)
-                );
+        if (!thread) {
+            logger.warn("Thread not found");
+            return;
+        }
 
-                if (thread === undefined) {
-                    if (
-                        event.changes.stateId !== undefined &&
-                        event.objectAttributes.state ===
-                            ObjectAttributesState.Closed
-                    ) {
-                        logger.warn("Thread not found");
-                        break;
-                    }
+        await archiveThread(thread.id);
+    }
 
-                    thread = await openThread(
-                        getDiscordThreadNamePrefixFromGitlabEvent(event)
-                    );
+    const thread =
+        (await getThreadByNamePrefix(
+            getUniqueDiscordThreadNamePrefixFromGitlabEvent(event)
+        )) ??
+        (await openThread(getDiscordThreadNamePrefixFromGitlabEvent(event)));
 
-                    await addMembersToThread(
-                        thread.id,
-                        event.objectAttributes.assigneeId
-                            ? await getDiscordMemberIdsByDevDiscordMemberId(
-                                  gitlabIdToDiscordId(
-                                      getAssigneeGitlabIdFromGitlabEvent(event)
-                                  )
-                              )
-                            : (
-                                  await getMembersByRoles([PC_DISCORD_ROLE_ID!])
-                              ).map((member) => member.id)
-                    );
-                }
+    // sync members
+    const members = await getDiscordMemberIdsByDevDiscordMemberId(
+        gitlabIdToDiscordId(getAssigneeGitlabIdFromGitlabEvent(event))
+    );
 
-                if (event.changes.stateId !== undefined) {
-                    if (
-                        event.objectAttributes.state ===
-                        ObjectAttributesState.Closed
-                    ) {
-                        await archiveThread(thread.id);
-                        break;
-                    }
+    await thread.members.fetch();
+    for (const [_, member] of await thread.members.cache.filter(
+        (member) => !members.includes(member.id)
+    )) {
+        await thread.members.remove(member);
+    }
 
-                    if (
-                        event.objectAttributes.state ===
-                        ObjectAttributesState.Opened
-                    ) {
-                        await unarchiveThread(thread.id);
-                    }
-                }
+    await addMembersToThread(thread.id, members);
 
-                if (
-                    event.changes?.assignees !== undefined &&
-                    event.objectAttributes.assigneeId !== null
-                ) {
-                    await addMembersToThread(
-                        thread.id,
-                        await getDiscordMemberIdsByDevDiscordMemberId(
-                            gitlabIdToDiscordId(
-                                getAssigneeGitlabIdFromGitlabEvent(event)
-                            )
-                        )
-                    );
-                }
+    // send message
+    let message =
+        `@here\n` +
+        `Link: ${event.objectAttributes.url}\n` +
+        `State: ${event.objectAttributes.state}\n` +
+        `Labels: ${Object.values(event.objectAttributes.labels)
+            .map((label) => `${label.title}`)
+            .join(", ")}\n`;
 
-                if (event.changes.labels !== undefined) {
-                    const previousLabels = Object.values(
-                        event.changes.labels.previous
-                    ).map((label) => label.title);
-                    const currentLabels = Object.values(
-                        event.changes.labels.current
-                    ).map((label) => label.title);
+    await sendMessageToThread(thread.id, message);
 
-                    const removedLabels = previousLabels.filter(
-                        (label) => !currentLabels.includes(label)
-                    );
-                    const addedLabels = currentLabels.filter(
-                        (label) => !previousLabels.includes(label)
-                    );
+    // update thread
+    if (event.objectAttributes.state === ObjectAttributesState.Closed) {
+        await archiveThread(thread.id);
+        return;
+    }
 
-                    let message = "@here\n";
-
-                    if (
-                        removedLabels.length === 0 &&
-                        addedLabels.length === 0
-                    ) {
-                        message += "No significant label changes.";
-                    } else if (removedLabels.length === 0) {
-                        message += `Changes: \`${addedLabels.join("`, `")}\``;
-                    } else if (addedLabels.length === 0) {
-                        message += `Changes: \`${removedLabels.join(
-                            "`, `"
-                        )}\` -> (removed)`;
-                    } else {
-                        message += `Changes: \`${removedLabels.join(
-                            "`, `"
-                        )}\` -> \`${addedLabels.join("`, `")}\``;
-                    }
-
-                    await sendMessageToThread(thread.id, message);
-                }
-            }
-            break;
-        case ObjectAttributesAction.Close:
-            {
-                const thread = await getThreadByName(
-                    getUniqueDiscordThreadNamePrefixFromGitlabEvent(event)
-                );
-
-                if (!thread) {
-                    logger.warn("Thread not found");
-                    break;
-                }
-
-                await archiveThread(thread.id);
-            }
-            break;
+    if (event.objectAttributes.state === ObjectAttributesState.Opened) {
+        await unarchiveThread(thread.id);
     }
 }

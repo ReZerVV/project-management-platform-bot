@@ -76,7 +76,7 @@ export async function openThread(name: string) {
 
     const thread = await channel.threads.create({
         name: name,
-        autoArchiveDuration: 60,
+        autoArchiveDuration: 60 * 60 * 24 * 3,
         reason: `Task created: ${name}`,
     });
 
